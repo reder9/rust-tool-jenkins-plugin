@@ -21,6 +21,7 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 /**
  * Represents a Rust toolchain installation containing rustc, cargo, and rustup.
@@ -109,11 +110,7 @@ public class RustInstallation extends ToolInstallation
 
         @Override
         public RustInstallation[] getInstallations() {
-            Jenkins jenkins = Jenkins.getInstanceOrNull();
-            if (jenkins != null) {
-                return jenkins.getDescriptorByType(DescriptorImpl.class).getInstallations();
-            }
-            return new RustInstallation[0];
+            return super.getInstallations();
         }
 
         @Override
@@ -121,14 +118,26 @@ public class RustInstallation extends ToolInstallation
             super.setInstallations(installations);
         }
 
+        @POST
+        @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
         public FormValidation doCheckName(@QueryParameter String value) {
+            Jenkins instance = Jenkins.getInstanceOrNull();
+            if (instance != null) {
+                instance.checkPermission(Jenkins.ADMINISTER);
+            }
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.error("Name is required");
             }
             return FormValidation.ok();
         }
 
+        @POST
+        @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
         public FormValidation doCheckHome(@QueryParameter String value) {
+            Jenkins instance = Jenkins.getInstanceOrNull();
+            if (instance != null) {
+                instance.checkPermission(Jenkins.ADMINISTER);
+            }
             if (value != null && !value.trim().isEmpty()) {
                 File f = new File(value);
                 if (!f.isDirectory()) {

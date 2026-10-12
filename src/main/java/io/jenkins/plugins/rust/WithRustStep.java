@@ -127,16 +127,42 @@ public class WithRustStep extends Step implements Serializable {
                 throw new IllegalStateException("Missing required execution context (listener, node, workspace, or env)");
             }
 
-            RustInstallation installation = findInstallation(step.getToolchain());
+            String effectiveToolchain = step.getToolchain();
+            String effectiveComponents = step.getComponents();
+            String effectiveTargets = step.getTargets();
+
+            // Auto-detect from rust-toolchain.toml or rust-toolchain if toolchain is blank or "auto"
+            if (effectiveToolchain == null || effectiveToolchain.isBlank() || "auto".equalsIgnoreCase(effectiveToolchain)) {
+                RustToolchainFileParser.ToolchainSpec spec = RustToolchainFileParser.parseFromDirectory(workspace);
+                if (spec != null) {
+                    if (spec.channel() != null && !spec.channel().isBlank()) {
+                        effectiveToolchain = spec.channel();
+                        listener.getLogger().println("[withRust] Auto-detected toolchain '" + effectiveToolchain + "' from rust-toolchain file");
+                    }
+                    if (!spec.components().isEmpty() && (effectiveComponents == null || effectiveComponents.isBlank())) {
+                        effectiveComponents = String.join(",", spec.components());
+                        listener.getLogger().println("[withRust] Auto-detected components from rust-toolchain file: " + effectiveComponents);
+                    }
+                    if (!spec.targets().isEmpty() && (effectiveTargets == null || effectiveTargets.isBlank())) {
+                        effectiveTargets = String.join(",", spec.targets());
+                        listener.getLogger().println("[withRust] Auto-detected targets from rust-toolchain file: " + effectiveTargets);
+                    }
+                }
+            }
+            if (effectiveToolchain == null || effectiveToolchain.isBlank() || "auto".equalsIgnoreCase(effectiveToolchain)) {
+                effectiveToolchain = "stable";
+            }
+
+            RustInstallation installation = findInstallation(effectiveToolchain);
             if (installation == null) {
                 // Provision dynamically on the fly
-                listener.getLogger().println("[withRust] Dynamic toolchain requested: " + step.getToolchain());
-                String toolName = "rust-" + step.getToolchain().replaceAll("[^a-zA-Z0-9.-]", "_");
+                listener.getLogger().println("[withRust] Dynamic toolchain requested: " + effectiveToolchain);
+                String toolName = "rust-" + effectiveToolchain.replaceAll("[^a-zA-Z0-9.-]", "_");
                 RustupInstaller installer = new RustupInstaller(
-                        step.getToolchain(),
+                        effectiveToolchain,
                         step.getMirrorUrl(),
-                        step.getComponents(),
-                        step.getTargets());
+                        effectiveComponents,
+                        effectiveTargets);
                 installation = new RustInstallation(toolName, null, Collections.singletonList(new hudson.tools.InstallSourceProperty(Collections.singletonList(installer))));
             }
 
