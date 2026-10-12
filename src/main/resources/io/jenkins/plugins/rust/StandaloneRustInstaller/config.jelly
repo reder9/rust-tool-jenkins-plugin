@@ -1,0 +1,9 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry title="${%Version}" field="toolchain" description="${%Specific release version, e.g. '1.85.0'}">
+        <f:textbox default="1.85.0" />
+    </f:entry>
+    <f:entry title="${%Crates.io mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror}">
+        <f:textbox />
+    </f:entry>
+</j:jelly>

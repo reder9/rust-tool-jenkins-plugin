@@ -1,0 +1,13 @@
+name: cd
+on:
+  push:
+    branches:
+      - "main"
+    tags:
+      - "**"
+jobs:
+  release:
+    uses: "jenkins-infra/github-reusable-workflows/.github/workflows/maven-cd.yml@v1"
+    secrets:
+      JENKINS_MAVEN_RELEASES_TOKEN: "${{ secrets.JENKINS_MAVEN_RELEASES_TOKEN }}"
+      JENKINS_MAVEN_RELEASES_USER: "${{ secrets.JENKINS_MAVEN_RELEASES_USER }}"

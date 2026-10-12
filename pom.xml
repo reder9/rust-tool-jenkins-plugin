@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>6.2236.v12dd4c483242</version>
+        <relativePath />
+    </parent>
+
+    <groupId>io.jenkins.plugins</groupId>
+    <artifactId>rust-tool</artifactId>
+    <version>${changelist}</version>
+    <packaging>hpi</packaging>
+
+    <name>Rust Tool and Pipeline Plugin</name>
+    <description>Plugin that automatically provisions Rust toolchains (rustc, cargo, rustup) across Linux, macOS, and Windows agents with pipeline step, components, targets, and crate mirror support.</description>
+    <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+        <tag>${scmTag}</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/jenkinsci/${project.artifactId}-plugin/issues</url>
+    </issueManagement>
+
+    <properties>
+        <changelist>999999-SNAPSHOT</changelist>
+        <jenkins.baseline>2.555</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <spotbugs.effort>Max</spotbugs.effort>
+        <spotbugs.threshold>Low</spotbugs.threshold>
+        <!-- RPU-mandated strict enforcer flags -->
+        <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+        <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
+        <ban-deprecated-stapler.skip>false</ban-deprecated-stapler.skip>
+        <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
+        <banObsoleteDependencyOverrides.skip>false</banObsoleteDependencyOverrides.skip>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.555.x</artifactId>
+                <version>7169.vb_32a_cfd93fa_6</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+        </dependency>
+
+        <!-- Test dependencies for JenkinsRule and Pipeline execution -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.18.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-job</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-cps</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-basic-steps</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-durable-task-step</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>
