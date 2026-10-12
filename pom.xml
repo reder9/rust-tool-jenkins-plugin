@@ -25,6 +25,13 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <id>redersoft</id>
+            <name>redersoft</name>
+        </developer>
+    </developers>
+
     <scm>
         <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>

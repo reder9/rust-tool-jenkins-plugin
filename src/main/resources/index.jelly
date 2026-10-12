@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    Provides automatic cross-platform Rust and Cargo toolchain installation and the withRust pipeline step for Jenkins.
+</div>
