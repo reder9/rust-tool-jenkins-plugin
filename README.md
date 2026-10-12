@@ -12,6 +12,7 @@ Automatically installs, provisions, and configures **Rust toolchains** (`rustc`,
 ## Features
 
 - **Automated Bootstrap (`rustup`)**: Downloads platform-native standalone `rustup-init` without shell scripts or curl-piping, provisioning `stable`, `beta`, `nightly`, or pinned releases (`1.85.0`).
+- **Automatic `rust-toolchain.toml` Detection**: Automatically parses repository `rust-toolchain.toml` or legacy `rust-toolchain` files when toolchain is omitted or set to `'auto'`, extracting channel, components, and targets without boilerplate.
 - **Air-Gapped Standalone Mode**: Direct download of official static toolchain archives (`rust-<version>-<target>.tar.gz` / `.zip`) from `static.rust-lang.org/dist/` for locked-down corporate networks.
 - **Declarative Pipeline Step (`withRust`)**: Context wrapper that manages `PATH`, `RUSTC`, `CARGO`, `RUSTUP_HOME`, and `CARGO_HOME` automatically.
 - **Component & Target Auto-Provisioning**: Install `clippy`, `rustfmt`, `llvm-tools-preview`, `miri`, and cross-compilation targets (`wasm32-unknown-unknown`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`) on demand.
@@ -94,4 +95,4 @@ tool:
 
 ## License
 
-Licensed under the [MIT License](LICENSE.md).
+Licensed under the [MIT License](LICENSE).
