@@ -1,0 +1,2 @@
+_extends: github:jenkinsci/.github:/.github/release-drafter.yml
+tag-template: "rust-tool-$NEXT_MINOR_VERSION"
