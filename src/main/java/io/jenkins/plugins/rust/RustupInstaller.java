@@ -11,10 +11,13 @@ import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolInstallation;
 import hudson.tools.ToolInstallerDescriptor;
 import hudson.util.ArgumentListBuilder;
+import hudson.ProxyConfiguration;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import jenkins.MasterToSlaveFileCallable;
@@ -52,7 +55,7 @@ public class RustupInstaller extends RustInstaller {
 
         log.getLogger().println("[Rust] Bootstrapping Rust toolchain '" + toolchain + "' on " + node.getDisplayName() + "...");
 
-        RustPlatformUtils.PlatformInfo platform = RustPlatformUtils.detect(expected);
+        RustPlatformUtils.PlatformInfo platform = RustPlatformUtils.detect(node);
         String rustupUrl = RustPlatformUtils.getRustupInitUrl(platform.targetTriple(), platform.binaryExtension());
 
         FilePath tempDir = expected.child("tmp");
@@ -60,7 +63,13 @@ public class RustupInstaller extends RustInstaller {
         FilePath rustupInit = tempDir.child("rustup-init" + platform.binaryExtension());
 
         log.getLogger().println("[Rust] Downloading rustup-init from " + rustupUrl);
-        rustupInit.copyFrom(URI.create(rustupUrl).toURL());
+        URL url = URI.create(rustupUrl).toURL();
+        URLConnection conn = ProxyConfiguration.open(url);
+        conn.setConnectTimeout(30000);
+        conn.setReadTimeout(120000);
+        try (InputStream in = conn.getInputStream()) {
+            rustupInit.copyFrom(in);
+        }
         if (!platform.binaryExtension().equals(".exe")) {
             rustupInit.chmod(0755);
         }

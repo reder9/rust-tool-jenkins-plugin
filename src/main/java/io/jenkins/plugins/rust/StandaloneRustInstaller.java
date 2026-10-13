@@ -8,9 +8,12 @@ import hudson.model.TaskListener;
 import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolInstallation;
 import hudson.tools.ToolInstallerDescriptor;
+import hudson.ProxyConfiguration;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -44,12 +47,18 @@ public class StandaloneRustInstaller extends RustInstaller {
             }
         }
 
-        RustPlatformUtils.PlatformInfo platform = RustPlatformUtils.detect(expected);
+        RustPlatformUtils.PlatformInfo platform = RustPlatformUtils.detect(node);
         String downloadUrl = RustPlatformUtils.getStandaloneArchiveUrl(toolchain, platform.targetTriple());
         log.getLogger().println("[Rust] Downloading standalone archive from " + downloadUrl);
 
         FilePath tempArchive = expected.child("rust-dist" + (platform.targetTriple().contains("windows") ? ".zip" : ".tar.gz"));
-        tempArchive.copyFrom(URI.create(downloadUrl).toURL());
+        URL url = URI.create(downloadUrl).toURL();
+        URLConnection conn = ProxyConfiguration.open(url);
+        conn.setConnectTimeout(30000);
+        conn.setReadTimeout(120000);
+        try (InputStream in = conn.getInputStream()) {
+            tempArchive.copyFrom(in);
+        }
 
         log.getLogger().println("[Rust] Extracting toolchain archive...");
         if (tempArchive.getName().endsWith(".zip")) {
