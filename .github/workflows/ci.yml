@@ -78,3 +78,17 @@ jobs:
         with:
           name: rust-tool.hpi
           path: target/*.hpi
+
+  ci:
+    name: CI
+    needs: [ test, package ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Status
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.package.result }}" != "success" ]; then
+            echo "CI checks failed"
+            exit 1
+          fi
+          echo "All matrix tests and packaging succeeded!"
