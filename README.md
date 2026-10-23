@@ -12,6 +12,12 @@ Automatically installs, provisions, and configures **Rust toolchains** (`rustc`,
 ## Features
 
 - **Automated Bootstrap (`rustup`)**: Downloads platform-native standalone `rustup-init` without shell scripts or curl-piping, provisioning `stable`, `beta`, `nightly`, or pinned releases (`1.85.0`).
+- **Fast Tool Acceleration (`binstall: true`)**: Provisions standalone `cargo-binstall` binaries across Linux, macOS, and Windows to download and install pre-compiled CLI tools in seconds.
+- **Shared Compilation Cache (`sccache: true`)**: Auto-provisions Mozilla's standalone `sccache` binary, sets `RUSTC_WRAPPER = "sccache"`, and configures shared agent compiler caches to dramatically accelerate recurring builds.
+- **Pre-Configured Global Tools & Custom Homes**: Seamlessly resolve named installations (`tool: 'rust-stable'`) or explicit filesystem paths (`home: '/opt/rust'`).
+- **Host System Runtime Probing (`system: true`)**: Automatically discovers pre-installed `cargo`, `rustc`, and `rustup` on agent nodes (PATH, `~/.cargo/bin`, Windows Program Files) for zero-download execution.
+- **Automated Tool Crates (`crates: '...'`)**: Installs specified tool crates (e.g. `cargo-nextest,cargo-audit`) via `cargo binstall` (or `cargo install`) before step execution.
+- **Cross-Platform & Alpine/Musl Support**: Native target resolution across Linux (glibc and musl/Alpine), macOS (Intel and Apple Silicon), and Windows (MSVC).
 - **Automatic `rust-toolchain.toml` Detection**: Automatically parses repository `rust-toolchain.toml` or legacy `rust-toolchain` files when toolchain is omitted or set to `'auto'`, extracting channel, components, and targets without boilerplate.
 - **Air-Gapped Standalone Mode**: Direct download of official static toolchain archives (`rust-<version>-<target>.tar.gz` / `.zip`) from `static.rust-lang.org/dist/` for locked-down corporate networks.
 - **Declarative Pipeline Step (`withRust`)**: Context wrapper that manages `PATH`, `RUSTC`, `CARGO`, `RUSTUP_HOME`, and `CARGO_HOME` automatically.
@@ -38,6 +44,34 @@ pipeline {
             }
         }
     }
+}
+```
+
+### Pre-Configured Tool or System Rust
+```groovy
+// Use a pre-configured tool defined in Jenkins Global Tool Configuration
+withRust(tool: 'rust-stable') {
+    sh 'cargo test'
+}
+
+// Or probe host agent for existing rustc / cargo (zero network download)
+withRust(system: true) {
+    sh 'cargo --version'
+}
+```
+
+### High-Performance CI with `sccache` and `cargo-binstall`
+```groovy
+// Speed up builds with Mozilla sccache and pre-compiled cargo tools
+withRust(
+    toolchain: 'stable',
+    sccache: true,                     // Auto-provisions Mozilla sccache & sets RUSTC_WRAPPER
+    binstall: true,                    // Auto-provisions cargo-binstall binary
+    crates: 'cargo-nextest,cargo-audit', // Installs binary tools in seconds without compiling
+    isolateCargoHome: true
+) {
+    sh 'cargo nextest run'             // Next-generation fast test runner
+    sh 'cargo audit'                   // Security dependency vulnerability scanner
 }
 ```
 

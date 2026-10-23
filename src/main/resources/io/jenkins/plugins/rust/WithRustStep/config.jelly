@@ -1,7 +1,16 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:entry title="${%Toolchain}" field="toolchain" description="${%e.g. 'stable', '1.85.0', 'nightly', or tool name}">
+    <f:entry title="${%Toolchain}" field="toolchain" description="${%e.g. 'stable', '1.85.0', 'nightly', or 'auto'}">
         <f:textbox default="stable" />
+    </f:entry>
+    <f:entry title="${%Configured tool}" field="tool" description="${%Optional named Rust tool configured in Manage Jenkins -> Tools}">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Use system Rust}" field="system" description="${%Probe and use the host agent's existing rustc/cargo runtime}">
+        <f:checkbox />
+    </f:entry>
+    <f:entry title="${%Custom Rust home}" field="home" description="${%Explicit filesystem path to an existing Rust installation directory}">
+        <f:textbox />
     </f:entry>
     <f:entry title="${%Components}" field="components" description="${%Comma-separated components, e.g. 'clippy,rustfmt'}">
         <f:textbox />
@@ -9,7 +18,19 @@
     <f:entry title="${%Targets}" field="targets" description="${%Comma-separated targets, e.g. 'wasm32-unknown-unknown'}">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%Crates mirror URL}" field="mirrorUrl" description="${%Optional crates mirror URL (e.g. Artifactory, Nexus)}">
+    <f:entry title="${%Enable sccache compiler cache}" field="sccache" description="${%Provision sccache and set RUSTC_WRAPPER to accelerate builds}">
+        <f:checkbox />
+    </f:entry>
+    <f:entry title="${%Custom sccache cache directory}" field="sccacheDir" description="${%Optional custom cache path - defaults to agent shared cache directory}">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Enable cargo-binstall}" field="binstall" description="${%Provision cargo-binstall to install binary tool crates in seconds}">
+        <f:checkbox />
+    </f:entry>
+    <f:entry title="${%Install tool crates}" field="crates" description="${%Comma-separated cargo crates to install - e.g. cargo-nextest, cargo-audit}">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Crates mirror URL}" field="mirrorUrl" description="${%Optional crates mirror URL - e.g. Artifactory or Nexus}">
         <f:textbox />
     </f:entry>
     <f:entry title="${%Isolate CARGO_HOME in workspace}" field="isolateCargoHome" description="${%Prevents global ~/.cargo lock contention on multi-executor agents}">

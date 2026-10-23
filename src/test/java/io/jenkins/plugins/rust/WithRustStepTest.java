@@ -20,16 +20,34 @@ class WithRustStepTest {
     @Test
     void testStepConfiguration(JenkinsRule j) {
         WithRustStep step = new WithRustStep("1.85.0");
+        step.setTool("Rust-1.85.0");
+        step.setHome("/opt/rust");
+        step.setSystem(true);
         step.setComponents("clippy,rustfmt");
         step.setTargets("wasm32-unknown-unknown");
         step.setMirrorUrl("https://artifactory.corp/cargo-virtual");
         step.setIsolateCargoHome(true);
+        step.setSccache(true);
+        step.setSccacheVersion("0.18.0");
+        step.setSccacheDir(".sccache-custom");
+        step.setBinstall(true);
+        step.setBinstallVersion("1.26.0");
+        step.setCrates("cargo-nextest,cargo-audit");
 
         assertEquals("1.85.0", step.getToolchain());
+        assertEquals("Rust-1.85.0", step.getTool());
+        assertEquals("/opt/rust", step.getHome());
+        assertTrue(step.isSystem());
         assertEquals("clippy,rustfmt", step.getComponents());
         assertEquals("wasm32-unknown-unknown", step.getTargets());
         assertEquals("https://artifactory.corp/cargo-virtual", step.getMirrorUrl());
         assertTrue(step.isIsolateCargoHome());
+        assertTrue(step.isSccache());
+        assertEquals("0.18.0", step.getSccacheVersion());
+        assertEquals(".sccache-custom", step.getSccacheDir());
+        assertTrue(step.isBinstall());
+        assertEquals("1.26.0", step.getBinstallVersion());
+        assertEquals("cargo-nextest,cargo-audit", step.getCrates());
     }
 
     @Test
@@ -66,5 +84,46 @@ class WithRustStepTest {
         j.assertLogContains("[withRust] Auto-detected toolchain '1.85.0' from rust-toolchain file", b);
         j.assertLogContains("[withRust] Auto-detected components from rust-toolchain file: clippy", b);
         j.assertLogContains("CARGO_HOME=", b);
+    }
+
+    @Test
+    void testPipelineExecutionWithConfiguredTool(JenkinsRule j) throws Exception {
+        File mockHome = j.createTmpDir();
+        new File(mockHome, "bin").mkdirs();
+        RustInstallation inst = new RustInstallation("GlobalRustTool", mockHome.getAbsolutePath(), Collections.emptyList());
+        j.jenkins.getDescriptorByType(RustInstallation.DescriptorImpl.class).setInstallations(inst);
+
+        WorkflowJob p = j.createProject(WorkflowJob.class, "rust-named-tool-test");
+        p.setDefinition(new CpsFlowDefinition(
+            """
+            node {
+                withRust(tool: 'GlobalRustTool') {
+                    echo "TOOL_PATH=${env.PATH}"
+                }
+            }
+            """, true));
+
+        WorkflowRun b = j.buildAndAssertSuccess(p);
+        j.assertLogContains("[withRust] Using configured tool installation: GlobalRustTool", b);
+        j.assertLogContains("TOOL_PATH=", b);
+    }
+
+    @Test
+    void testPipelineExecutionWithCustomHome(JenkinsRule j) throws Exception {
+        File customDir = j.createTmpDir();
+        new File(customDir, "bin").mkdirs();
+        String escapedPath = customDir.getAbsolutePath().replace("\\", "/");
+
+        WorkflowJob p = j.createProject(WorkflowJob.class, "rust-custom-home-test");
+        p.setDefinition(new CpsFlowDefinition(
+            "node {\n" +
+            "    withRust(home: '" + escapedPath + "') {\n" +
+            "        echo \"CUSTOM_RUSTC=${env.RUSTC}\"\n" +
+            "    }\n" +
+            "}\n", true));
+
+        WorkflowRun b = j.buildAndAssertSuccess(p);
+        j.assertLogContains("[withRust] Using pre-configured Rust home: " + escapedPath, b);
+        j.assertLogContains("CUSTOM_RUSTC=", b);
     }
 }

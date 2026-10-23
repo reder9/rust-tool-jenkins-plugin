@@ -1,16 +1,19 @@
 package io.jenkins.plugins.rust;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.FilePath;
 import hudson.model.Computer;
 import hudson.model.Node;
+import jenkins.security.MasterToSlaveCallable;
+import java.io.File;
 import java.io.Serializable;
 import java.util.Locale;
 import java.util.Map;
 
 /**
  * Utility for detecting agent platform, CPU architecture, and target triples for Rust toolchains.
- * Directly queries controller-managed Computer system properties rather than remote remoting callables,
- * and fails early on unsupported platforms.
+ * Directly queries controller-managed Computer system properties and remote agents,
+ * properly supporting Linux musl (Alpine) as well as glibc targets.
  */
 public final class RustPlatformUtils implements Serializable {
 
@@ -18,11 +21,16 @@ public final class RustPlatformUtils implements Serializable {
 
     private RustPlatformUtils() {}
 
-    public record PlatformInfo(String os, String arch, String targetTriple, String binaryExtension) implements Serializable {}
+    public record PlatformInfo(String os, String arch, String targetTriple, String binaryExtension, boolean isMusl) implements Serializable {
+        public PlatformInfo(String os, String arch, String targetTriple, String binaryExtension) {
+            this(os, arch, targetTriple, binaryExtension, targetTriple != null && targetTriple.contains("-musl"));
+        }
+    }
 
     public static PlatformInfo detect(Node node) {
         String osName = null;
         String osArch = null;
+        boolean isMusl = false;
 
         Computer computer = node != null ? node.toComputer() : null;
         if (computer != null) {
@@ -31,11 +39,15 @@ public final class RustPlatformUtils implements Serializable {
                 if (props != null) {
                     Object nameObj = props.get("os.name");
                     Object archObj = props.get("os.arch");
+                    Object verObj = props.get("os.version");
                     if (nameObj != null) {
                         osName = nameObj.toString();
                     }
                     if (archObj != null) {
                         osArch = archObj.toString();
+                    }
+                    if (verObj != null && verObj.toString().toLowerCase(Locale.ENGLISH).contains("alpine")) {
+                        isMusl = true;
                     }
                 }
             } catch (java.io.IOException | InterruptedException ignored) {
@@ -50,14 +62,33 @@ public final class RustPlatformUtils implements Serializable {
             osArch = System.getProperty("os.arch", "");
         }
 
-        return parsePlatform(osName, osArch);
+        if (osName.toLowerCase(Locale.ENGLISH).contains("alpine") || osName.toLowerCase(Locale.ENGLISH).contains("musl")) {
+            isMusl = true;
+        }
+
+        if (!isMusl && node != null && node.getChannel() != null) {
+            try {
+                isMusl = Boolean.TRUE.equals(node.getChannel().call(new MuslProbeCallable()));
+            } catch (Exception ignored) {
+            }
+        }
+
+        return parsePlatform(osName, osArch, isMusl);
     }
 
     public static PlatformInfo detect(FilePath workspace) {
-        return parsePlatform(System.getProperty("os.name", ""), System.getProperty("os.arch", ""));
+        boolean isMusl = new File("/etc/alpine-release").exists()
+                || new File("/lib/ld-musl-x86_64.so.1").exists()
+                || new File("/lib/ld-musl-aarch64.so.1").exists();
+        return parsePlatform(System.getProperty("os.name", ""), System.getProperty("os.arch", ""), isMusl);
     }
 
     public static PlatformInfo parsePlatform(String rawOs, String rawArch) {
+        boolean isMusl = rawOs != null && (rawOs.toLowerCase(Locale.ENGLISH).contains("alpine") || rawOs.toLowerCase(Locale.ENGLISH).contains("musl"));
+        return parsePlatform(rawOs, rawArch, isMusl);
+    }
+
+    public static PlatformInfo parsePlatform(String rawOs, String rawArch, boolean isMusl) {
         String osName = rawOs != null ? rawOs.toLowerCase(Locale.ENGLISH) : "";
         String osArch = rawArch != null ? rawArch.toLowerCase(Locale.ENGLISH) : "";
 
@@ -95,17 +126,27 @@ public final class RustPlatformUtils implements Serializable {
             throw new IllegalArgumentException("Unsupported CPU architecture: '" + rawArch + "' for Rust toolchain on " + os);
         }
 
-        String triple = resolveTriple(os, arch);
-        return new PlatformInfo(os, arch, triple, ext);
+        String triple = resolveTriple(os, arch, isMusl);
+        return new PlatformInfo(os, arch, triple, ext, isMusl);
     }
 
     public static String resolveTriple(String os, String arch) {
+        return resolveTriple(os, arch, false);
+    }
+
+    public static String resolveTriple(String os, String arch, boolean isMusl) {
         if ("windows".equals(os)) {
             return arch + "-pc-windows-msvc";
         } else if ("darwin".equals(os)) {
             return arch + "-apple-darwin";
         } else {
-            // Linux target triples
+            // Linux target triples (musl vs gnu)
+            if (isMusl) {
+                if ("armv7".equals(arch)) {
+                    return "armv7-unknown-linux-musleabihf";
+                }
+                return arch + "-unknown-linux-musl";
+            }
             if ("armv7".equals(arch)) {
                 return "armv7-unknown-linux-gnueabihf";
             }
@@ -120,5 +161,17 @@ public final class RustPlatformUtils implements Serializable {
     public static String getStandaloneArchiveUrl(String version, String targetTriple) {
         String archiveExt = targetTriple.contains("windows") ? ".zip" : ".tar.gz";
         return "https://static.rust-lang.org/dist/rust-" + version + "-" + targetTriple + archiveExt;
+    }
+
+    @SuppressFBWarnings(value = "DMI_HARDCODED_ABSOLUTE_FILENAME", justification = "Probing standard musl libc platform paths")
+    private static class MuslProbeCallable extends MasterToSlaveCallable<Boolean, RuntimeException> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Boolean call() {
+            return new File("/etc/alpine-release").exists()
+                    || new File("/lib/ld-musl-x86_64.so.1").exists()
+                    || new File("/lib/ld-musl-aarch64.so.1").exists();
+        }
     }
 }

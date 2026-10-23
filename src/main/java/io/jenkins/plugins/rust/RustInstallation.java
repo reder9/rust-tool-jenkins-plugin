@@ -52,13 +52,23 @@ public class RustInstallation extends ToolInstallation
         if (home != null && !home.isEmpty()) {
             // Binaries can live in $HOME/bin or $HOME/.cargo/bin
             String binDir = home + File.separator + "bin";
-            String cargoBinDir = home + File.separator + ".cargo" + File.separator + "bin";
+            String cargoBinDir;
+            String cargoHome;
+            if (home.endsWith(File.separator + ".cargo") || home.endsWith("/.cargo") || home.endsWith("\\.cargo")) {
+                cargoBinDir = binDir;
+                cargoHome = home;
+            } else {
+                cargoBinDir = home + File.separator + ".cargo" + File.separator + "bin";
+                cargoHome = home + File.separator + ".cargo";
+            }
 
             env.put("PATH+RUST", binDir);
-            env.put("PATH+CARGO", cargoBinDir);
+            if (!cargoBinDir.equals(binDir)) {
+                env.put("PATH+CARGO", cargoBinDir);
+            }
 
             if (!env.containsKey("CARGO_HOME")) {
-                env.put("CARGO_HOME", home + File.separator + ".cargo");
+                env.put("CARGO_HOME", cargoHome);
             }
             if (!env.containsKey("RUSTUP_HOME")) {
                 env.put("RUSTUP_HOME", home + File.separator + ".rustup");

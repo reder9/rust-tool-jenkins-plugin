@@ -5,21 +5,13 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.Node;
 import hudson.model.TaskListener;
-import hudson.tools.ToolInstallation;
-import hudson.util.ArgumentListBuilder;
-import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
-import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
-import org.jenkinsci.plugins.workflow.steps.GeneralNonBlockingStepExecution;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -29,22 +21,31 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Pipeline step that provisions and configures Rust and Cargo in the workspace execution context.
+ * Supports dynamic toolchains, pre-configured Jenkins tools, host system runtimes,
+ * workspace cache isolation, corporate crate mirrors, and CI acceleration tools (sccache, cargo-binstall).
  */
 public class WithRustStep extends Step implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private String toolchain = "stable";
+    private String tool;
+    private String home;
+    private boolean system = false;
     private String components;
     private String targets;
     private String mirrorUrl;
     private boolean isolateCargoHome = false;
+    private boolean binstall = false;
+    private String binstallVersion = "latest";
+    private boolean sccache = false;
+    private String sccacheVersion = "latest";
+    private String sccacheDir;
+    private String crates;
 
     @DataBoundConstructor
     public WithRustStep(String toolchain) {
-        if (toolchain != null && !toolchain.isBlank()) {
-            this.toolchain = toolchain.trim();
-        }
+        this.toolchain = Util.fixEmptyAndTrim(toolchain);
     }
 
     public String getToolchain() {
@@ -53,9 +54,34 @@ public class WithRustStep extends Step implements Serializable {
 
     @DataBoundSetter
     public void setToolchain(String toolchain) {
-        if (toolchain != null && !toolchain.isBlank()) {
-            this.toolchain = toolchain.trim();
-        }
+        this.toolchain = Util.fixEmptyAndTrim(toolchain);
+    }
+
+    public String getTool() {
+        return tool;
+    }
+
+    @DataBoundSetter
+    public void setTool(String tool) {
+        this.tool = Util.fixEmptyAndTrim(tool);
+    }
+
+    public String getHome() {
+        return home;
+    }
+
+    @DataBoundSetter
+    public void setHome(String home) {
+        this.home = Util.fixEmptyAndTrim(home);
+    }
+
+    public boolean isSystem() {
+        return system;
+    }
+
+    @DataBoundSetter
+    public void setSystem(boolean system) {
+        this.system = system;
     }
 
     public String getComponents() {
@@ -64,7 +90,7 @@ public class WithRustStep extends Step implements Serializable {
 
     @DataBoundSetter
     public void setComponents(String components) {
-        this.components = components;
+        this.components = Util.fixEmptyAndTrim(components);
     }
 
     public String getTargets() {
@@ -73,7 +99,7 @@ public class WithRustStep extends Step implements Serializable {
 
     @DataBoundSetter
     public void setTargets(String targets) {
-        this.targets = targets;
+        this.targets = Util.fixEmptyAndTrim(targets);
     }
 
     public String getMirrorUrl() {
@@ -82,7 +108,7 @@ public class WithRustStep extends Step implements Serializable {
 
     @DataBoundSetter
     public void setMirrorUrl(String mirrorUrl) {
-        this.mirrorUrl = mirrorUrl;
+        this.mirrorUrl = Util.fixEmptyAndTrim(mirrorUrl);
     }
 
     public boolean isIsolateCargoHome() {
@@ -94,116 +120,63 @@ public class WithRustStep extends Step implements Serializable {
         this.isolateCargoHome = isolateCargoHome;
     }
 
-    @Override
-    public StepExecution start(StepContext context) throws Exception {
-        return new Execution(context, this);
+    public boolean isBinstall() {
+        return binstall;
     }
 
-    private static class Execution extends GeneralNonBlockingStepExecution {
+    @DataBoundSetter
+    public void setBinstall(boolean binstall) {
+        this.binstall = binstall;
+    }
 
-        private static final long serialVersionUID = 1L;
+    public String getBinstallVersion() {
+        return binstallVersion;
+    }
 
-        private final WithRustStep step;
+    @DataBoundSetter
+    public void setBinstallVersion(String binstallVersion) {
+        this.binstallVersion = Util.fixEmptyAndTrim(binstallVersion);
+    }
 
-        Execution(StepContext context, WithRustStep step) {
-            super(context);
-            this.step = step;
-        }
+    public boolean isSccache() {
+        return sccache;
+    }
 
-        @Override
-        public boolean start() throws Exception {
-            run(this::execute);
-            return false;
-        }
+    @DataBoundSetter
+    public void setSccache(boolean sccache) {
+        this.sccache = sccache;
+    }
 
-        private void execute() throws Exception {
-            StepContext context = getContext();
-            TaskListener listener = context.get(TaskListener.class);
-            Node node = context.get(Node.class);
-            FilePath workspace = context.get(FilePath.class);
-            EnvVars currentEnv = context.get(EnvVars.class);
+    public String getSccacheVersion() {
+        return sccacheVersion;
+    }
 
-            if (listener == null || node == null || workspace == null || currentEnv == null) {
-                throw new IllegalStateException("Missing required execution context (listener, node, workspace, or env)");
-            }
+    @DataBoundSetter
+    public void setSccacheVersion(String sccacheVersion) {
+        this.sccacheVersion = Util.fixEmptyAndTrim(sccacheVersion);
+    }
 
-            String effectiveToolchain = step.getToolchain();
-            String effectiveComponents = step.getComponents();
-            String effectiveTargets = step.getTargets();
+    public String getSccacheDir() {
+        return sccacheDir;
+    }
 
-            // Auto-detect from rust-toolchain.toml or rust-toolchain if toolchain is blank or "auto"
-            if (effectiveToolchain == null || effectiveToolchain.isBlank() || "auto".equalsIgnoreCase(effectiveToolchain)) {
-                RustToolchainFileParser.ToolchainSpec spec = RustToolchainFileParser.parseFromDirectory(workspace);
-                if (spec != null) {
-                    if (spec.channel() != null && !spec.channel().isBlank()) {
-                        effectiveToolchain = spec.channel();
-                        listener.getLogger().println("[withRust] Auto-detected toolchain '" + effectiveToolchain + "' from rust-toolchain file");
-                    }
-                    if (!spec.components().isEmpty() && (effectiveComponents == null || effectiveComponents.isBlank())) {
-                        effectiveComponents = String.join(",", spec.components());
-                        listener.getLogger().println("[withRust] Auto-detected components from rust-toolchain file: " + effectiveComponents);
-                    }
-                    if (!spec.targets().isEmpty() && (effectiveTargets == null || effectiveTargets.isBlank())) {
-                        effectiveTargets = String.join(",", spec.targets());
-                        listener.getLogger().println("[withRust] Auto-detected targets from rust-toolchain file: " + effectiveTargets);
-                    }
-                }
-            }
-            if (effectiveToolchain == null || effectiveToolchain.isBlank() || "auto".equalsIgnoreCase(effectiveToolchain)) {
-                effectiveToolchain = "stable";
-            }
+    @DataBoundSetter
+    public void setSccacheDir(String sccacheDir) {
+        this.sccacheDir = Util.fixEmptyAndTrim(sccacheDir);
+    }
 
-            RustInstallation installation = findInstallation(effectiveToolchain);
-            if (installation == null) {
-                // Provision dynamically on the fly
-                listener.getLogger().println("[withRust] Dynamic toolchain requested: " + effectiveToolchain);
-                String toolName = "rust-" + effectiveToolchain.replaceAll("[^a-zA-Z0-9.-]", "_");
-                RustupInstaller installer = new RustupInstaller(
-                        effectiveToolchain,
-                        step.getMirrorUrl(),
-                        effectiveComponents,
-                        effectiveTargets);
-                installation = new RustInstallation(toolName, null, Collections.singletonList(new hudson.tools.InstallSourceProperty(Collections.singletonList(installer))));
-            }
+    public String getCrates() {
+        return crates;
+    }
 
-            RustInstallation nodeInstallation = installation.forNode(node, listener);
-            nodeInstallation = nodeInstallation.forEnvironment(currentEnv);
+    @DataBoundSetter
+    public void setCrates(String crates) {
+        this.crates = Util.fixEmptyAndTrim(crates);
+    }
 
-            EnvVars overrides = new EnvVars();
-            nodeInstallation.buildEnvVars(overrides);
-
-            // Workspace-isolated CARGO_HOME if requested
-            if (step.isIsolateCargoHome()) {
-                FilePath cargoHome = workspace.child(".cargo");
-                cargoHome.mkdirs();
-                overrides.put("CARGO_HOME", cargoHome.getRemote());
-                overrides.put("PATH+CARGO_LOCAL", cargoHome.child("bin").getRemote());
-                if (step.getMirrorUrl() != null) {
-                    CargoConfigUtils.writeConfig(workspace, step.getMirrorUrl());
-                }
-            } else if (step.getMirrorUrl() != null) {
-                CargoConfigUtils.writeConfig(workspace, step.getMirrorUrl());
-            }
-
-            context.newBodyInvoker()
-                    .withContext(overrides)
-                    .withCallback(BodyExecutionCallback.wrap(context))
-                    .start();
-        }
-
-        private RustInstallation findInstallation(String toolchainOrName) {
-            Jenkins jenkins = Jenkins.getInstanceOrNull();
-            if (jenkins == null) {
-                return null;
-            }
-            RustInstallation.DescriptorImpl desc = jenkins.getDescriptorByType(RustInstallation.DescriptorImpl.class);
-            for (RustInstallation inst : desc.getInstallations()) {
-                if (inst.getName().equalsIgnoreCase(toolchainOrName)) {
-                    return inst;
-                }
-            }
-            return null;
-        }
+    @Override
+    public StepExecution start(StepContext context) throws Exception {
+        return new WithRustStepExecution(this, context);
     }
 
     @Extension
