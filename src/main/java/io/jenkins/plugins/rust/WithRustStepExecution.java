@@ -141,6 +141,9 @@ public class WithRustStepExecution extends StepExecution implements Serializable
                         step.getMirrorUrl(),
                         effectiveComponents,
                         effectiveTargets);
+                if (step.getExpectedSha256() != null && !step.getExpectedSha256().isBlank()) {
+                    installer.setExpectedSha256(step.getExpectedSha256());
+                }
                 installation = new RustInstallation(
                         toolName,
                         null,

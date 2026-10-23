@@ -60,6 +60,12 @@ public class StandaloneRustInstaller extends RustInstaller {
             tempArchive.copyFrom(in);
         }
 
+        if (getExpectedSha256() != null && !getExpectedSha256().isBlank()) {
+            RustChecksumUtils.verifySha256(tempArchive, getExpectedSha256(), log);
+        } else {
+            RustChecksumUtils.downloadAndVerifySha256(tempArchive, downloadUrl + ".sha256", log, false);
+        }
+
         log.getLogger().println("[Rust] Extracting toolchain archive...");
         if (tempArchive.getName().endsWith(".zip")) {
             tempArchive.unzip(expected);

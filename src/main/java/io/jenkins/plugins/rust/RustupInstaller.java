@@ -70,6 +70,13 @@ public class RustupInstaller extends RustInstaller {
         try (InputStream in = conn.getInputStream()) {
             rustupInit.copyFrom(in);
         }
+
+        if (getExpectedSha256() != null && !getExpectedSha256().isBlank()) {
+            RustChecksumUtils.verifySha256(rustupInit, getExpectedSha256(), log);
+        } else {
+            RustChecksumUtils.downloadAndVerifySha256(rustupInit, rustupUrl + ".sha256", log, false);
+        }
+
         if (!platform.binaryExtension().equals(".exe")) {
             rustupInit.chmod(0755);
         }

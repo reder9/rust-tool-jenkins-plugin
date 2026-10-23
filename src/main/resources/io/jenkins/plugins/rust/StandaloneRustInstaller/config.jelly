@@ -6,4 +6,7 @@
     <f:entry title="${%Crates.io mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror}">
         <f:textbox />
     </f:entry>
+    <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce integrity - if omitted, auto-verified from upstream if available}">
+        <f:textbox />
+    </f:entry>
 </j:jelly>

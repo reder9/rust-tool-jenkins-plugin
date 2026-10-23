@@ -42,6 +42,7 @@ public class WithRustStep extends Step implements Serializable {
     private String sccacheVersion = "latest";
     private String sccacheDir;
     private String crates;
+    private String expectedSha256;
 
     @DataBoundConstructor
     public WithRustStep(String toolchain) {
@@ -172,6 +173,15 @@ public class WithRustStep extends Step implements Serializable {
     @DataBoundSetter
     public void setCrates(String crates) {
         this.crates = Util.fixEmptyAndTrim(crates);
+    }
+
+    public String getExpectedSha256() {
+        return expectedSha256;
+    }
+
+    @DataBoundSetter
+    public void setExpectedSha256(String expectedSha256) {
+        this.expectedSha256 = Util.fixEmptyAndTrim(expectedSha256);
     }
 
     @Override

@@ -15,6 +15,7 @@ public abstract class RustInstaller extends ToolInstaller {
     protected final String mirrorUrl;
     protected final String components;
     protected final String targets;
+    protected String expectedSha256;
 
     protected RustInstaller(String label, String toolchain, String mirrorUrl, String components, String targets) {
         super(label);
@@ -22,6 +23,15 @@ public abstract class RustInstaller extends ToolInstaller {
         this.mirrorUrl = (mirrorUrl != null && !mirrorUrl.isBlank()) ? mirrorUrl.trim() : null;
         this.components = (components != null && !components.isBlank()) ? components.trim() : null;
         this.targets = (targets != null && !targets.isBlank()) ? targets.trim() : null;
+    }
+
+    public String getExpectedSha256() {
+        return expectedSha256;
+    }
+
+    @org.kohsuke.stapler.DataBoundSetter
+    public void setExpectedSha256(String expectedSha256) {
+        this.expectedSha256 = hudson.Util.fixEmptyAndTrim(expectedSha256);
     }
 
     public String getToolchain() {

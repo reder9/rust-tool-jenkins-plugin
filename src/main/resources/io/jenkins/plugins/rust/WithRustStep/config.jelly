@@ -30,6 +30,9 @@
     <f:entry title="${%Install tool crates}" field="crates" description="${%Comma-separated cargo crates to install - e.g. cargo-nextest, cargo-audit}">
         <f:textbox />
     </f:entry>
+    <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce toolchain download integrity}">
+        <f:textbox />
+    </f:entry>
     <f:entry title="${%Crates mirror URL}" field="mirrorUrl" description="${%Optional crates mirror URL - e.g. Artifactory or Nexus}">
         <f:textbox />
     </f:entry>

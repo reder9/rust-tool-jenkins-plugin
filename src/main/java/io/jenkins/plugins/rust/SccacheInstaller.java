@@ -130,6 +130,8 @@ public final class SccacheInstaller implements Serializable {
                 tempArchive.copyFrom(in);
             }
 
+            RustChecksumUtils.downloadAndVerifySha256(tempArchive, downloadUrl + ".sha256", log, false);
+
             if (filename.endsWith(".zip")) {
                 tempArchive.unzip(installDir);
             } else {

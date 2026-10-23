@@ -9,7 +9,10 @@
     <f:entry title="${%Targets}" field="targets" description="${%Comma-separated list of cross-compilation targets, e.g. 'wasm32-unknown-unknown'}">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%Crates.io mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror (e.g. Artifactory, Nexus)}">
+    <f:entry title="${%Crates.io mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror - e.g. Artifactory or Nexus}">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce integrity - if omitted, auto-verified from upstream if available}">
         <f:textbox />
     </f:entry>
 </j:jelly>

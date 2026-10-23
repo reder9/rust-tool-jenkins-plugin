@@ -17,6 +17,7 @@ Automatically installs, provisions, and configures **Rust toolchains** (`rustc`,
 - **Pre-Configured Global Tools & Custom Homes**: Seamlessly resolve named installations (`tool: 'rust-stable'`) or explicit filesystem paths (`home: '/opt/rust'`).
 - **Host System Runtime Probing (`system: true`)**: Automatically discovers pre-installed `cargo`, `rustc`, and `rustup` on agent nodes (PATH, `~/.cargo/bin`, Windows Program Files) for zero-download execution.
 - **Automated Tool Crates (`crates: '...'`)**: Installs specified tool crates (e.g. `cargo-nextest,cargo-audit`) via `cargo binstall` (or `cargo install`) before step execution.
+- **Cryptographic SHA-256 Integrity Verification**: Automatically verifies upstream `.sha256` checksums for `rustup-init`, `sccache`, and standalone archives; supports explicit `expectedSha256` enforcement for zero-trust enterprise compliance.
 - **Cross-Platform & Alpine/Musl Support**: Native target resolution across Linux (glibc and musl/Alpine), macOS (Intel and Apple Silicon), and Windows (MSVC).
 - **Automatic `rust-toolchain.toml` Detection**: Automatically parses repository `rust-toolchain.toml` or legacy `rust-toolchain` files when toolchain is omitted or set to `'auto'`, extracting channel, components, and targets without boilerplate.
 - **Air-Gapped Standalone Mode**: Direct download of official static toolchain archives (`rust-<version>-<target>.tar.gz` / `.zip`) from `static.rust-lang.org/dist/` for locked-down corporate networks.
@@ -57,6 +58,17 @@ withRust(tool: 'rust-stable') {
 // Or probe host agent for existing rustc / cargo (zero network download)
 withRust(system: true) {
     sh 'cargo --version'
+}
+```
+
+### Cryptographic Checksum Integrity Enforcement
+```groovy
+// Strictly enforce SHA-256 integrity for toolchain bootstrap
+withRust(
+    toolchain: '1.85.0',
+    expectedSha256: 'be4ba7b777100c851ab268e95f70f405d28d7813ba60a9bdcf4e88c88acf8602'
+) {
+    sh 'cargo test'
 }
 ```
 
