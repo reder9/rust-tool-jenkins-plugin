@@ -57,6 +57,9 @@ class WithRustStepTest {
         assertEquals("withRust", desc.getFunctionName());
         assertTrue(desc.takesImplicitBlockArgument());
         assertFalse(desc.getRequiredContext().isEmpty());
+
+        assertFalse(desc.doFillSccacheVersionItems("latest").isEmpty());
+        assertFalse(desc.doFillBinstallVersionItems("latest").isEmpty());
     }
 
     @Test

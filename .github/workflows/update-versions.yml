@@ -1,0 +1,124 @@
+name: Update Rust Catalog
+
+on:
+  schedule:
+    # Run every Monday at 02:30 UTC
+    - cron: '30 2 * * 1'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'src/main/resources/io/jenkins/plugins/rust/versions.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-catalog:
+    name: Sync Upstream Rust, sccache & cargo-binstall Releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Merge existing catalog branch if present
+        run: |
+          if git ls-remote --exit-code --heads origin catalog >/dev/null 2>&1; then
+            git fetch origin catalog
+            if git cat-file -e origin/catalog:versions.json 2>/dev/null; then
+              git show origin/catalog:versions.json > /tmp/catalog-branch-versions.json
+              python -c "
+          import json
+          p_main = 'src/main/resources/io/jenkins/plugins/rust/versions.json'
+          main_data = json.load(open(p_main))
+          cat_data = json.load(open('/tmp/catalog-branch-versions.json'))
+          for k, v in cat_data.get('versions', {}).items():
+              main_data.setdefault('versions', {}).setdefault(k, v)
+          for list_key in ('sccacheVersions', 'binstallVersions'):
+              merged = list(dict.fromkeys((cat_data.get(list_key) or []) + (main_data.get(list_key) or [])))
+              if merged:
+                  main_data[list_key] = merged
+          with open(p_main, 'w') as f:
+              json.dump(main_data, f, indent=2)
+              f.write('\n')
+          "
+            fi
+          fi
+
+      - name: Run Catalog Updater
+        if: github.event_name != 'push'
+        run: |
+          python scripts/update-rust-versions.py \
+            --catalog src/main/resources/io/jenkins/plugins/rust/versions.json \
+            --token "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Publish live catalog to catalog branch
+        run: |
+          CATALOG_SRC="src/main/resources/io/jenkins/plugins/rust/versions.json"
+          TMP_CATALOG="$(mktemp)"
+          cp "$CATALOG_SRC" "$TMP_CATALOG"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          WORKTREE_DIR="$(mktemp -d)"
+          if git ls-remote --exit-code --heads origin catalog >/dev/null 2>&1; then
+            git fetch origin catalog
+            git worktree add "$WORKTREE_DIR" origin/catalog
+            cd "$WORKTREE_DIR"
+            git checkout -B catalog
+          else
+            git worktree add --detach "$WORKTREE_DIR"
+            cd "$WORKTREE_DIR"
+            git checkout --orphan catalog
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          cp "$TMP_CATALOG" versions.json
+          mkdir -p src/main/resources/io/jenkins/plugins/rust
+          cp "$TMP_CATALOG" src/main/resources/io/jenkins/plugins/rust/versions.json
+          git add versions.json src/main/resources/io/jenkins/plugins/rust/versions.json
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "chore(catalog): publish updated Rust, sccache, and cargo-binstall version catalog"
+            git push origin HEAD:refs/heads/catalog --force
+          else
+            echo "Catalog branch is already up to date."
+          fi
+
+      - name: Check for bundled catalog changes on main
+        id: git_status
+        run: |
+          git status -s
+          if [ -n "$(git status --porcelain src/main/resources/io/jenkins/plugins/rust/versions.json)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request for bundled fallback catalog
+        if: steps.git_status.outputs.changed == 'true' && github.event_name != 'push'
+        continue-on-error: true
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "feat(catalog): update bundled Rust, sccache, and cargo-binstall version catalog"
+          title: "feat(catalog): update bundled Rust, sccache, and cargo-binstall version catalog"
+          body: |
+            Automated weekly sync with upstream `rust-lang/rust`, `mozilla/sccache`, and `cargo-bins/cargo-binstall` releases.
+
+            - Live catalog has already been published to the `catalog` branch.
+            - This PR updates the bundled fallback catalog in `src/main/resources/io/jenkins/plugins/rust/versions.json`.
+          branch: "automated/update-rust-catalog"
+          base: main
+          delete-branch: true

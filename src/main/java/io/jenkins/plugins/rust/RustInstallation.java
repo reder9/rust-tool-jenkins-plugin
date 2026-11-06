@@ -133,7 +133,9 @@ public class RustInstallation extends ToolInstallation
         public FormValidation doCheckName(@QueryParameter String value) {
             Jenkins instance = Jenkins.getInstanceOrNull();
             if (instance != null) {
-                instance.checkPermission(Jenkins.ADMINISTER);
+                if (!instance.hasPermission(Jenkins.ADMINISTER)) {
+                    instance.checkPermission(Jenkins.MANAGE);
+                }
             }
             if (value == null || value.trim().isEmpty()) {
                 return FormValidation.error("Name is required");
@@ -146,10 +148,12 @@ public class RustInstallation extends ToolInstallation
         public FormValidation doCheckHome(@QueryParameter String value) {
             Jenkins instance = Jenkins.getInstanceOrNull();
             if (instance != null) {
-                instance.checkPermission(Jenkins.ADMINISTER);
+                if (!instance.hasPermission(Jenkins.ADMINISTER)) {
+                    instance.checkPermission(Jenkins.MANAGE);
+                }
             }
             if (value != null && !value.trim().isEmpty()) {
-                File f = new File(value);
+                File f = new File(value.trim());
                 if (!f.isDirectory()) {
                     return FormValidation.warning("Specified directory does not exist or is not a directory on controller");
                 }

@@ -52,7 +52,7 @@ public class WithRustStepExecution extends StepExecution implements Serializable
         if (node == null) {
             node = Jenkins.get();
         }
-        if (launcher == null && node != null) {
+        if (launcher == null) {
             launcher = node.createLauncher(listener);
         }
         if (currentEnv == null) {
@@ -129,7 +129,7 @@ public class WithRustStepExecution extends StepExecution implements Serializable
             if (effectiveToolchain == null || effectiveToolchain.isBlank() || "auto".equalsIgnoreCase(effectiveToolchain.trim())) {
                 effectiveToolchain = "stable";
             } else {
-                effectiveToolchain = effectiveToolchain.trim();
+                effectiveToolchain = RustVersionCatalog.getInstance().resolveVersion(effectiveToolchain.trim());
             }
 
             RustInstallation installation = findInstallation(effectiveToolchain);
@@ -172,7 +172,7 @@ public class WithRustStepExecution extends StepExecution implements Serializable
         }
 
         // 3. Mozilla sccache shared compilation cache support
-        if (step.isSccache()) {
+        if (step.isSccacheEnabled()) {
             FilePath sccacheInstallDir = SccacheInstaller.provisionSccache(
                     node, workspace, listener, step.getSccacheVersion(), step.getMirrorUrl());
             additions.put("PATH+SCCACHE", sccacheInstallDir.getRemote());
@@ -189,7 +189,8 @@ public class WithRustStepExecution extends StepExecution implements Serializable
                     resolvedSccacheDir = raw;
                 }
             } else {
-                FilePath agentRootDir = node.getRootPath() != null ? node.getRootPath() : workspace;
+                FilePath rootPath = node.getRootPath();
+                FilePath agentRootDir = rootPath != null ? rootPath : workspace;
                 FilePath defaultCache = agentRootDir.child("caches").child("sccache");
                 defaultCache.mkdirs();
                 resolvedSccacheDir = defaultCache.getRemote();
@@ -199,7 +200,7 @@ public class WithRustStepExecution extends StepExecution implements Serializable
         }
 
         // 4. cargo-binstall fast binary crate tool support
-        if (step.isBinstall()) {
+        if (step.isBinstallEnabled()) {
             FilePath binstallDir = CargoBinstallInstaller.provisionBinstall(
                     node, workspace, listener, step.getBinstallVersion(), step.getMirrorUrl());
             additions.put("PATH+BINSTALL", binstallDir.getRemote());
@@ -262,10 +263,9 @@ public class WithRustStepExecution extends StepExecution implements Serializable
             Launcher.ProcStarter ps = launcher.launch()
                     .cmds(cmd)
                     .envs(execEnv)
-                    .pwd(workspace);
-            if (listener != null) {
-                ps.stdout(listener.getLogger()).stderr(listener.getLogger());
-            }
+                    .pwd(workspace)
+                    .stdout(listener.getLogger())
+                    .stderr(listener.getLogger());
 
             int exitCode = ps.join();
             if (exitCode != 0) {

@@ -8,9 +8,11 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.util.ListBoxModel;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
+import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -18,6 +20,8 @@ import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 /**
  * Pipeline step that provisions and configures Rust and Cargo in the workspace execution context.
@@ -184,6 +188,14 @@ public class WithRustStep extends Step implements Serializable {
         this.expectedSha256 = Util.fixEmptyAndTrim(expectedSha256);
     }
 
+    public boolean isSccacheEnabled() {
+        return sccache || (sccacheVersion != null && !sccacheVersion.isEmpty() && !"latest".equalsIgnoreCase(sccacheVersion));
+    }
+
+    public boolean isBinstallEnabled() {
+        return binstall || (binstallVersion != null && !binstallVersion.isEmpty() && !"latest".equalsIgnoreCase(binstallVersion));
+    }
+
     @Override
     public StepExecution start(StepContext context) throws Exception {
         return new WithRustStepExecution(this, context);
@@ -207,6 +219,26 @@ public class WithRustStep extends Step implements Serializable {
         @Override
         public boolean takesImplicitBlockArgument() {
             return true;
+        }
+
+        @POST
+        @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
+        public ListBoxModel doFillSccacheVersionItems(@QueryParameter String sccacheVersion) {
+            Jenkins instance = Jenkins.getInstanceOrNull();
+            if (instance != null) {
+                instance.checkPermission(Jenkins.READ);
+            }
+            return RustVersionCatalog.buildSccacheVersionItems(sccacheVersion);
+        }
+
+        @POST
+        @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
+        public ListBoxModel doFillBinstallVersionItems(@QueryParameter String binstallVersion) {
+            Jenkins instance = Jenkins.getInstanceOrNull();
+            if (instance != null) {
+                instance.checkPermission(Jenkins.READ);
+            }
+            return RustVersionCatalog.buildBinstallVersionItems(binstallVersion);
         }
 
         @Override

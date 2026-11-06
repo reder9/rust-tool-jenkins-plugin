@@ -1,42 +1,46 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:entry title="${%Toolchain}" field="toolchain" description="${%e.g. 'stable', '1.85.0', 'nightly', or 'auto'}">
-        <f:textbox default="stable" />
+  <f:entry title="${%Toolchain}" field="toolchain" description="${%Rust toolchain channel, version, or auto to detect from rust-toolchain file}">
+    <f:textbox default="stable" />
+  </f:entry>
+  <f:entry title="${%Configured Tool Name}" field="tool" description="${%Optional named Rust tool configured in Jenkins Global Tool Configuration}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Use Host System Rust}" field="system" description="${%Probe and use the host agent existing rustc and cargo runtime}">
+    <f:checkbox />
+  </f:entry>
+  <f:entry title="${%Custom Rust Home Path}" field="home" description="${%Explicit filesystem path to an existing Rust installation directory}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Components}" field="components" description="${%Comma-separated rustup components such as clippy,rustfmt}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Targets}" field="targets" description="${%Comma-separated cross-compilation targets such as wasm32-unknown-unknown}">
+    <f:textbox />
+  </f:entry>
+  <f:optionalBlock title="${%Enable Mozilla sccache Compiler Cache}" field="sccache" inline="true">
+    <f:entry title="${%Mozilla sccache Version}" field="sccacheVersion" description="${%Optional sccache release version, defaults to latest}">
+      <f:select default="latest" />
     </f:entry>
-    <f:entry title="${%Configured tool}" field="tool" description="${%Optional named Rust tool configured in Manage Jenkins -> Tools}">
-        <f:textbox />
+    <f:entry title="${%Custom sccache Cache Directory}" field="sccacheDir" description="${%Optional custom cache path for SCCACHE_DIR}">
+      <f:textbox />
     </f:entry>
-    <f:entry title="${%Use system Rust}" field="system" description="${%Probe and use the host agent's existing rustc/cargo runtime}">
-        <f:checkbox />
+  </f:optionalBlock>
+  <f:optionalBlock title="${%Enable cargo-binstall Fast Binary Installer}" field="binstall" inline="true">
+    <f:entry title="${%cargo-binstall Version}" field="binstallVersion" description="${%Optional cargo-binstall release version, defaults to latest}">
+      <f:select default="latest" />
     </f:entry>
-    <f:entry title="${%Custom Rust home}" field="home" description="${%Explicit filesystem path to an existing Rust installation directory}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Components}" field="components" description="${%Comma-separated components, e.g. 'clippy,rustfmt'}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Targets}" field="targets" description="${%Comma-separated targets, e.g. 'wasm32-unknown-unknown'}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Enable sccache compiler cache}" field="sccache" description="${%Provision sccache and set RUSTC_WRAPPER to accelerate builds}">
-        <f:checkbox />
-    </f:entry>
-    <f:entry title="${%Custom sccache cache directory}" field="sccacheDir" description="${%Optional custom cache path - defaults to agent shared cache directory}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Enable cargo-binstall}" field="binstall" description="${%Provision cargo-binstall to install binary tool crates in seconds}">
-        <f:checkbox />
-    </f:entry>
-    <f:entry title="${%Install tool crates}" field="crates" description="${%Comma-separated cargo crates to install - e.g. cargo-nextest, cargo-audit}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce toolchain download integrity}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Crates mirror URL}" field="mirrorUrl" description="${%Optional crates mirror URL - e.g. Artifactory or Nexus}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Isolate CARGO_HOME in workspace}" field="isolateCargoHome" description="${%Prevents global ~/.cargo lock contention on multi-executor agents}">
-        <f:checkbox />
-    </f:entry>
+  </f:optionalBlock>
+  <f:entry title="${%Install Tool Crates}" field="crates" description="${%Comma-separated cargo tool crates to install such as cargo-nextest,cargo-audit}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce toolchain download integrity}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Crates Mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror URL}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Isolate CARGO_HOME in Workspace}" field="isolateCargoHome" description="${%Prevents shared cargo lock contention on multi-executor agents}">
+    <f:checkbox />
+  </f:entry>
 </j:jelly>

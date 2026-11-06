@@ -1,18 +1,18 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:entry title="${%Toolchain version or channel}" field="toolchain" description="${%e.g. 'stable', '1.85.0', 'nightly'}">
-        <f:textbox default="stable" />
-    </f:entry>
-    <f:entry title="${%Components}" field="components" description="${%Comma-separated list of components, e.g. 'clippy,rustfmt'}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Targets}" field="targets" description="${%Comma-separated list of cross-compilation targets, e.g. 'wasm32-unknown-unknown'}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Crates.io mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror - e.g. Artifactory or Nexus}">
-        <f:textbox />
-    </f:entry>
-    <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce integrity - if omitted, auto-verified from upstream if available}">
-        <f:textbox />
-    </f:entry>
+  <f:entry title="${%Toolchain version or channel}" field="toolchain" description="${%Rust release version or channel such as stable, beta, or nightly}">
+    <f:select default="stable" />
+  </f:entry>
+  <f:entry title="${%Components}" field="components" description="${%Comma-separated list of rustup components such as clippy,rustfmt}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Targets}" field="targets" description="${%Comma-separated list of cross-compilation targets such as wasm32-unknown-unknown}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Crates Mirror URL}" field="mirrorUrl" description="${%Optional corporate crates repository mirror URL}">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="${%Expected SHA-256 Checksum}" field="expectedSha256" description="${%Optional SHA-256 hash to strictly enforce integrity}">
+    <f:textbox />
+  </f:entry>
 </j:jelly>

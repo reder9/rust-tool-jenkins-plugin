@@ -4,8 +4,10 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.FilePath;
 import hudson.model.Computer;
 import hudson.model.Node;
+import hudson.remoting.VirtualChannel;
 import jenkins.security.MasterToSlaveCallable;
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Locale;
 import java.util.Map;
@@ -66,16 +68,21 @@ public final class RustPlatformUtils implements Serializable {
             isMusl = true;
         }
 
-        if (!isMusl && node != null && node.getChannel() != null) {
-            try {
-                isMusl = Boolean.TRUE.equals(node.getChannel().call(new MuslProbeCallable()));
-            } catch (Exception ignored) {
+        if (!isMusl && node != null) {
+            VirtualChannel channel = node.getChannel();
+            if (channel != null) {
+                try {
+                    isMusl = Boolean.TRUE.equals(channel.call(new MuslProbeCallable()));
+                } catch (IOException | InterruptedException | RuntimeException ignored) {
+                    // Fall back to default libc detection
+                }
             }
         }
 
         return parsePlatform(osName, osArch, isMusl);
     }
 
+    @SuppressFBWarnings(value = "DMI_HARDCODED_ABSOLUTE_FILENAME", justification = "Probing standard musl libc platform paths")
     public static PlatformInfo detect(FilePath workspace) {
         boolean isMusl = new File("/etc/alpine-release").exists()
                 || new File("/lib/ld-musl-x86_64.so.1").exists()

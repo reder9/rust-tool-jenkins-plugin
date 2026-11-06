@@ -11,6 +11,8 @@ import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolInstallation;
 import hudson.tools.ToolInstallerDescriptor;
 import hudson.util.ArgumentListBuilder;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import hudson.ProxyConfiguration;
 import java.io.File;
 import java.io.IOException;
@@ -19,10 +21,14 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import jenkins.MasterToSlaveFileCallable;
+import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 /**
  * Automatically bootstraps rustup and provisions requested toolchains, components, and targets.
@@ -40,20 +46,22 @@ public class RustupInstaller extends RustInstaller {
         FilePath expected = preferredLocation(tool, node);
         expected.mkdirs();
 
-        String marker = toolchain + "|" + components + "|" + targets + "|" + mirrorUrl;
+        String resolvedToolchain = RustVersionCatalog.getInstance().resolveVersion(toolchain);
+
+        String marker = resolvedToolchain + "|" + components + "|" + targets + "|" + mirrorUrl;
         FilePath markerFile = expected.child(".installed-rustup");
         if (markerFile.exists()) {
             try {
                 String existing = markerFile.readToString().trim();
                 if (existing.equals(marker)) {
-                    log.getLogger().println("[Rust] Toolchain '" + toolchain + "' already installed at " + expected.getRemote());
+                    log.getLogger().println("[Rust] Toolchain '" + resolvedToolchain + "' already installed at " + expected.getRemote());
                     return expected;
                 }
             } catch (IOException ignored) {
             }
         }
 
-        log.getLogger().println("[Rust] Bootstrapping Rust toolchain '" + toolchain + "' on " + node.getDisplayName() + "...");
+        log.getLogger().println("[Rust] Bootstrapping Rust toolchain '" + resolvedToolchain + "' on " + node.getDisplayName() + "...");
 
         RustPlatformUtils.PlatformInfo platform = RustPlatformUtils.detect(node);
         String rustupUrl = RustPlatformUtils.getRustupInitUrl(platform.targetTriple(), platform.binaryExtension());
@@ -119,12 +127,12 @@ public class RustupInstaller extends RustInstaller {
         }
 
         // 2. Install requested toolchain
-        log.getLogger().println("[Rust] Installing toolchain '" + toolchain + "'...");
+        log.getLogger().println("[Rust] Installing toolchain '" + resolvedToolchain + "'...");
         ArgumentListBuilder toolchainArgs = new ArgumentListBuilder();
         toolchainArgs.add(rustupBin.getRemote());
         toolchainArgs.add("toolchain");
         toolchainArgs.add("install");
-        toolchainArgs.add(toolchain);
+        toolchainArgs.add(resolvedToolchain);
 
         exitCode = launcher.launch()
                 .cmds(toolchainArgs)
@@ -135,14 +143,14 @@ public class RustupInstaller extends RustInstaller {
                 .join();
 
         if (exitCode != 0) {
-            throw new IOException("Failed to install toolchain '" + toolchain + "' (exit code " + exitCode + ")");
+            throw new IOException("Failed to install toolchain '" + resolvedToolchain + "' (exit code " + exitCode + ")");
         }
 
         // 3. Set default toolchain
         ArgumentListBuilder defaultArgs = new ArgumentListBuilder();
         defaultArgs.add(rustupBin.getRemote());
         defaultArgs.add("default");
-        defaultArgs.add(toolchain);
+        defaultArgs.add(resolvedToolchain);
         launcher.launch().cmds(defaultArgs).envs(env).pwd(expected).join();
 
         // 4. Install components if specified
@@ -154,7 +162,7 @@ public class RustupInstaller extends RustInstaller {
             compArgs.add("add");
             compArgs.add(comp);
             compArgs.add("--toolchain");
-            compArgs.add(toolchain);
+            compArgs.add(resolvedToolchain);
             launcher.launch().cmds(compArgs).envs(env).stdout(log.getLogger()).pwd(expected).join();
         }
 
@@ -167,7 +175,7 @@ public class RustupInstaller extends RustInstaller {
             tgtArgs.add("add");
             tgtArgs.add(tgt);
             tgtArgs.add("--toolchain");
-            tgtArgs.add(toolchain);
+            tgtArgs.add(resolvedToolchain);
             launcher.launch().cmds(tgtArgs).envs(env).stdout(log.getLogger()).pwd(expected).join();
         }
 
@@ -189,7 +197,7 @@ public class RustupInstaller extends RustInstaller {
         }
 
         markerFile.write(marker, "UTF-8");
-        log.getLogger().println("[Rust] Successfully installed Rust toolchain '" + toolchain + "' at " + expected.getRemote());
+        log.getLogger().println("[Rust] Successfully installed Rust toolchain '" + resolvedToolchain + "' at " + expected.getRemote());
         return expected;
     }
 
@@ -220,6 +228,45 @@ public class RustupInstaller extends RustInstaller {
         @Override
         public boolean isApplicable(Class<? extends ToolInstallation> toolType) {
             return toolType == RustInstallation.class;
+        }
+
+        @POST
+        @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
+        public ListBoxModel doFillToolchainItems(@QueryParameter String toolchain) {
+            Jenkins instance = Jenkins.getInstanceOrNull();
+            if (instance != null) {
+                if (!instance.hasPermission(Jenkins.ADMINISTER)) {
+                    instance.checkPermission(Jenkins.MANAGE);
+                }
+            }
+            return RustVersionCatalog.buildToolchainItems(toolchain, true);
+        }
+
+        @POST
+        @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
+        public FormValidation doCheckToolchain(@QueryParameter String value) {
+            Jenkins instance = Jenkins.getInstanceOrNull();
+            if (instance != null) {
+                if (!instance.hasPermission(Jenkins.ADMINISTER)) {
+                    instance.checkPermission(Jenkins.MANAGE);
+                }
+            }
+            if (value == null || value.trim().isEmpty()) {
+                return FormValidation.error("Rust toolchain version or channel must be specified.");
+            }
+            String clean = value.trim();
+            RustVersionCatalog catalog = RustVersionCatalog.getInstance();
+            if (catalog.getChannels().contains(clean.toLowerCase(Locale.ENGLISH))) {
+                return FormValidation.ok();
+            }
+            String resolved = catalog.resolveVersion(clean);
+            if (catalog.getRelease(resolved) == null) {
+                return FormValidation.warning("Toolchain '" + clean + "' is not present in the bundled catalog. rustup will attempt dynamic resolution.");
+            }
+            if (!resolved.equals(clean)) {
+                return FormValidation.ok("Resolves to catalog release: " + resolved);
+            }
+            return FormValidation.ok();
         }
     }
 }

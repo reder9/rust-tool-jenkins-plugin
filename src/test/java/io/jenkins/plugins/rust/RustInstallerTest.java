@@ -37,5 +37,16 @@ class RustInstallerTest {
         StandaloneRustInstaller installer = new StandaloneRustInstaller("1.84.0", "https://mirror.internal");
         assertEquals("1.84.0", installer.getToolchain());
         assertEquals("https://mirror.internal", installer.getMirrorUrl());
+
+        RustupInstaller.DescriptorImpl rustupDesc = new RustupInstaller.DescriptorImpl();
+        assertTrue(rustupDesc.doFillToolchainItems("stable").size() >= 15);
+        assertEquals(hudson.util.FormValidation.Kind.OK, rustupDesc.doCheckToolchain("stable").kind);
+        assertEquals(hudson.util.FormValidation.Kind.OK, rustupDesc.doCheckToolchain("1.85").kind);
+        assertEquals(hudson.util.FormValidation.Kind.ERROR, rustupDesc.doCheckToolchain("").kind);
+
+        StandaloneRustInstaller.DescriptorImpl standaloneDesc = new StandaloneRustInstaller.DescriptorImpl();
+        assertTrue(standaloneDesc.doFillToolchainItems("1.85.0").size() >= 15);
+        assertEquals(hudson.util.FormValidation.Kind.OK, standaloneDesc.doCheckToolchain("1.85.0").kind);
+        assertEquals(hudson.util.FormValidation.Kind.ERROR, standaloneDesc.doCheckToolchain("").kind);
     }
 }

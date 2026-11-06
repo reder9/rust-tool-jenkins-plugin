@@ -8,9 +8,10 @@ class SccacheInstallerTest {
 
     @Test
     void testNormalizeVersion() {
-        assertEquals("0.18.0", SccacheInstaller.normalizeVersion(null));
-        assertEquals("0.18.0", SccacheInstaller.normalizeVersion(""));
-        assertEquals("0.18.0", SccacheInstaller.normalizeVersion("latest"));
+        String expectedLatest = RustVersionCatalog.getInstance().getLatestSccacheVersion();
+        assertEquals(expectedLatest, SccacheInstaller.normalizeVersion(null));
+        assertEquals(expectedLatest, SccacheInstaller.normalizeVersion(""));
+        assertEquals(expectedLatest, SccacheInstaller.normalizeVersion("latest"));
         assertEquals("0.18.0", SccacheInstaller.normalizeVersion("v0.18.0"));
         assertEquals("0.17.0", SccacheInstaller.normalizeVersion("0.17.0"));
     }

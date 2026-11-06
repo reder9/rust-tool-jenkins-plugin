@@ -19,6 +19,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,7 +43,7 @@ public final class RustChecksumUtils implements Serializable {
         }
         Matcher matcher = SHA256_HEX_PATTERN.matcher(checksumContent.trim());
         if (matcher.find()) {
-            return matcher.group(1).toLowerCase();
+            return matcher.group(1).toLowerCase(Locale.ENGLISH);
         }
         return null;
     }
@@ -131,7 +132,7 @@ public final class RustChecksumUtils implements Serializable {
             try (InputStream in = conn.getInputStream()) {
                 return new String(in.readAllBytes(), StandardCharsets.UTF_8).trim();
             }
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             if (log != null) {
                 log.getLogger().println("[Rust Checksum] Note: Could not fetch checksum from " + checksumUrl + " (" + e.getMessage() + ")");
             }

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>6.2236.v12dd4c483242</version>
+        <version>6.2250.va_d01d559a_209</version>
         <relativePath />
     </parent>
 
@@ -39,6 +39,7 @@
 
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
+        <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
         <jenkins.baseline>2.555</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.3</jenkins.version>
         <spotbugs.effort>Max</spotbugs.effort>
@@ -56,7 +57,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-2.555.x</artifactId>
-                <version>7169.vb_32a_cfd93fa_6</version>
+                <version>7237.v5071b_f4589f1</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -70,12 +71,6 @@
         </dependency>
 
         <!-- Test dependencies for JenkinsRule and Pipeline execution -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.18.0</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-job</artifactId>

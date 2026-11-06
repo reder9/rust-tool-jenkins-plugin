@@ -23,7 +23,7 @@ public final class SccacheInstaller implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public static final String DEFAULT_SCCACHE_BASE_URL = "https://github.com/mozilla/sccache/releases";
-    public static final String DEFAULT_SCCACHE_VERSION = "0.18.0";
+    public static final String DEFAULT_SCCACHE_VERSION = "0.19.0";
     private static final String MARKER_FILENAME = ".installed-sccache-version";
 
     private SccacheInstaller() {}
@@ -31,7 +31,7 @@ public final class SccacheInstaller implements Serializable {
     public static String normalizeVersion(String version) {
         String clean = Util.fixEmptyAndTrim(version);
         if (clean == null || "latest".equalsIgnoreCase(clean)) {
-            return DEFAULT_SCCACHE_VERSION;
+            return RustVersionCatalog.getInstance().getLatestSccacheVersion();
         }
         if ((clean.startsWith("v") || clean.startsWith("V")) && clean.length() > 1 && Character.isDigit(clean.charAt(1))) {
             return clean.substring(1);

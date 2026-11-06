@@ -12,6 +12,7 @@ Automatically installs, provisions, and configures **Rust toolchains** (`rustc`,
 ## Features
 
 - **Automated Bootstrap (`rustup`)**: Downloads platform-native standalone `rustup-init` without shell scripts or curl-piping, provisioning `stable`, `beta`, `nightly`, or pinned releases (`1.85.0`).
+- **Self-Updating Version Catalog**: Scheduled GitHub Actions workflow syncs upstream `rust-lang/rust`, `mozilla/sccache`, and `cargo-bins/cargo-binstall` releases to the `catalog` branch, allowing Jenkins instances to discover newly published versions automatically without requiring a plugin update.
 - **Fast Tool Acceleration (`binstall: true`)**: Provisions standalone `cargo-binstall` binaries across Linux, macOS, and Windows to download and install pre-compiled CLI tools in seconds.
 - **Shared Compilation Cache (`sccache: true`)**: Auto-provisions Mozilla's standalone `sccache` binary, sets `RUSTC_WRAPPER = "sccache"`, and configures shared agent compiler caches to dramatically accelerate recurring builds.
 - **Pre-Configured Global Tools & Custom Homes**: Seamlessly resolve named installations (`tool: 'rust-stable'`) or explicit filesystem paths (`home: '/opt/rust'`).
@@ -136,6 +137,16 @@ tool:
                     toolchain: "stable"
                     components: "clippy,rustfmt"
 ```
+
+---
+
+## Self-Updating Version Catalog & Air-Gapped Overrides
+
+The plugin includes a bundled [`versions.json`](src/main/resources/io/jenkins/plugins/rust/versions.json) catalog and automatically refreshes it every 24 hours from the `catalog` branch (maintained weekly by [`.github/workflows/update-versions.yml`](.github/workflows/update-versions.yml)).
+
+- **Air-Gapped / Custom Catalog File**: Place a custom `rust-versions.json` in `$JENKINS_HOME/rust-versions.json` or pass `-Dio.jenkins.plugins.rust.versionsFile=/path/to/versions.json`.
+- **Disable Remote Catalog Fetch**: Pass `-Dio.jenkins.plugins.rust.dynamicFetch=false` to use only the bundled classpath catalog.
+- **Manual Local Refresh**: Run `python scripts/update-rust-versions.py` (or `.\scripts\update-rust-versions.ps1`).
 
 ---
 
