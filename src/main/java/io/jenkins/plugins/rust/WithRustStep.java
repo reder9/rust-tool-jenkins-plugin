@@ -225,8 +225,8 @@ public class WithRustStep extends Step implements Serializable {
         @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
         public ListBoxModel doFillSccacheVersionItems(@QueryParameter String sccacheVersion) {
             Jenkins instance = Jenkins.getInstanceOrNull();
-            if (instance != null) {
-                instance.checkPermission(Jenkins.READ);
+            if (instance != null && !instance.hasPermission(Jenkins.READ)) {
+                return new ListBoxModel();
             }
             return RustVersionCatalog.buildSccacheVersionItems(sccacheVersion);
         }
@@ -235,8 +235,8 @@ public class WithRustStep extends Step implements Serializable {
         @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
         public ListBoxModel doFillBinstallVersionItems(@QueryParameter String binstallVersion) {
             Jenkins instance = Jenkins.getInstanceOrNull();
-            if (instance != null) {
-                instance.checkPermission(Jenkins.READ);
+            if (instance != null && !instance.hasPermission(Jenkins.READ)) {
+                return new ListBoxModel();
             }
             return RustVersionCatalog.buildBinstallVersionItems(binstallVersion);
         }
