@@ -156,10 +156,8 @@ public class StandaloneRustInstaller extends RustInstaller {
         @SuppressWarnings({"lgtm[jenkins/no-permission-check]", "lgtm[jenkins/csrf]"})
         public ListBoxModel doFillToolchainItems(@QueryParameter String toolchain) {
             Jenkins instance = Jenkins.getInstanceOrNull();
-            if (instance != null) {
-                if (!instance.hasPermission(Jenkins.ADMINISTER)) {
-                    instance.checkPermission(Jenkins.MANAGE);
-                }
+            if (instance != null && !instance.hasPermission(Jenkins.MANAGE) && !instance.hasPermission(Jenkins.ADMINISTER)) {
+                return new ListBoxModel();
             }
             return RustVersionCatalog.buildToolchainItems(toolchain, false);
         }
